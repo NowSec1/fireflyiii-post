@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Firefly III 记账助手</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <div>
+          <h1>Firefly III 记账助手</h1>
+          <p class="subtitle">快速录入日常收支，保持账本井井有条。</p>
+        </div>
+        <button id="refresh-data" class="ghost-button" type="button">
+          刷新数据
+        </button>
+      </header>
+
+      <form id="transaction-form" class="card">
+        <section class="section">
+          <h2 class="section-title">基本信息</h2>
+          <div class="grid">
+            <label class="field">
+              <span>描述 *</span>
+              <input type="text" id="description" required placeholder="例如：超市购物" />
+            </label>
+            <label class="field">
+              <span>日期 *</span>
+              <input type="date" id="date" required />
+            </label>
+            <label class="field">
+              <span>金额 *</span>
+              <input type="number" id="amount" min="0" step="0.01" required placeholder="0.00" />
+            </label>
+            <label class="field">
+              <span>交易类型</span>
+              <select id="transaction-type">
+                <option value="transfer">转账</option>
+                <option value="withdrawal">支出</option>
+                <option value="deposit">收入</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">账户与分类</h2>
+          <div class="grid">
+            <label class="field">
+              <span>来源账户 *</span>
+              <select id="source-account" required></select>
+            </label>
+            <label class="field">
+              <span>目标账户 *</span>
+              <select id="destination-account" required></select>
+            </label>
+            <label class="field">
+              <span>预算</span>
+              <select id="budget"></select>
+            </label>
+            <label class="field">
+              <span>分类</span>
+              <select id="category"></select>
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">标签与备注</h2>
+          <div class="grid grid-full">
+            <label class="field">
+              <span>标签</span>
+              <input
+                type="text"
+                id="tags"
+                placeholder="多个标签使用逗号分隔，例如：生活, 必需"
+                list="tag-options"
+              />
+              <datalist id="tag-options"></datalist>
+            </label>
+            <label class="field">
+              <span>备注</span>
+              <textarea id="notes" rows="3" placeholder="记录更详细的说明"></textarea>
+            </label>
+          </div>
+        </section>
+
+        <footer class="form-footer">
+          <div class="status" id="status" role="status"></div>
+          <button class="primary-button" type="submit">提交记账</button>
+        </footer>
+      </form>
+    </main>
+
+    <template id="option-template">
+      <option></option>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
