@@ -2,40 +2,57 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 import requests
 from flask import Blueprint, jsonify, request
+
+from .config_store import (
+    cache_is_stale,
+    get_cached_entry,
+    get_firefly_setting,
+    touch_cached_entry,
+    update_cached_entry,
+)
 
 firefly_blueprint = Blueprint("firefly", __name__)
 
 FIREFLY_BASE_URL_ENV = "FIREFLY_BASE_URL"
 FIREFLY_TOKEN_ENV = "FIREFLY_ACCESS_TOKEN"
+CONFIG_BASE_URL_KEY = "base_url"
+CONFIG_TOKEN_KEY = "access_token"
 
 
 class FireflyConfigurationError(RuntimeError):
     """Raised when the Firefly III configuration is incomplete."""
 
 
-def _get_env(name: str) -> str:
-    value = os.getenv(name)
-    if not value:
-        raise FireflyConfigurationError(
-            f"The environment variable {name} is required but was not provided."
-        )
-    return value
+def _get_configured_value(env_name: str, config_key: str) -> str:
+    """Read configuration from config.json with environment fallback."""
+    config_value = get_firefly_setting(config_key)
+    if config_value:
+        return config_value
+
+    value = os.getenv(env_name)
+    if value:
+        return value
+    raise FireflyConfigurationError(
+        "请在 config.json 中配置 Firefly III 连接信息，"
+        f"或设置环境变量 {env_name}。"
+    )
 
 
 def _firefly_headers() -> Dict[str, str]:
     return {
-        "Authorization": f"Bearer {_get_env(FIREFLY_TOKEN_ENV)}",
+        "Authorization": f"Bearer {_get_configured_value(FIREFLY_TOKEN_ENV, CONFIG_TOKEN_KEY)}",
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
 
 
 def _firefly_url(path: str) -> str:
-    base_url = _get_env(FIREFLY_BASE_URL_ENV).rstrip("/")
+    base_url = _get_configured_value(FIREFLY_BASE_URL_ENV, CONFIG_BASE_URL_KEY).rstrip("/")
     return f"{base_url}/api/v1/{path.lstrip('/')}"
 
 
@@ -65,23 +82,22 @@ def firefly_request(method: str, path: str, **kwargs: Any) -> Any:
 @firefly_blueprint.route("/accounts")
 def accounts() -> Any:
     params = {"type": request.args.get("type") or "asset"}
-    data = firefly_request("GET", "accounts", params=params)
-    return data
+    return _cached_resource("accounts", "accounts", params=params)
 
 
 @firefly_blueprint.route("/budgets")
 def budgets() -> Any:
-    return firefly_request("GET", "budgets")
+    return _cached_resource("budgets", "budgets")
 
 
 @firefly_blueprint.route("/categories")
 def categories() -> Any:
-    return firefly_request("GET", "categories")
+    return _cached_resource("categories", "categories")
 
 
 @firefly_blueprint.route("/tags")
 def tags() -> Any:
-    return firefly_request("GET", "tags")
+    return _cached_resource("tags", "tags")
 
 
 @firefly_blueprint.route("/transactions", methods=["POST"])
@@ -138,3 +154,32 @@ def _build_transaction_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         transaction_entry["notes"] = notes
 
     return {"transactions": [transaction_entry]}
+
+
+def _cache_key(name: str, params: Optional[Dict[str, Any]] = None) -> str:
+    if not params:
+        return name
+    sorted_items = sorted((key, value) for key, value in params.items() if value is not None)
+    suffix = "&".join(f"{key}={value}" for key, value in sorted_items)
+    return f"{name}?{suffix}" if suffix else name
+
+
+def _cached_resource(name: str, path: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    cache_key = _cache_key(name, params)
+    cached_data, last_synced = get_cached_entry(cache_key)
+    if cached_data is not None and not cache_is_stale(last_synced):
+        return cached_data
+
+    fresh_data = firefly_request("GET", path, params=params)
+    if isinstance(fresh_data, tuple):
+        # Fall back to cached data when the remote call fails.
+        if cached_data is not None:
+            return cached_data
+        return fresh_data
+
+    now = datetime.utcnow()
+    if cached_data is None or fresh_data != cached_data:
+        update_cached_entry(cache_key, fresh_data, now)
+    else:
+        touch_cached_entry(cache_key, now)
+    return fresh_data

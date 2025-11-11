@@ -11,14 +11,20 @@
 
 ## 快速开始
 
-1. **准备环境变量**
+1. **准备配置文件**
 
-   ```bash
-   export FIREFLY_BASE_URL="https://your-firefly-instance"
-   export FIREFLY_ACCESS_TOKEN="your-personal-access-token"
+   在项目根目录创建 `config.json`（可参考 `config.example.json`），写入 Firefly III 的访问信息：
+
+   ```json
+   {
+     "firefly": {
+       "base_url": "https://your-firefly-instance",
+       "access_token": "your-personal-access-token"
+     }
+   }
    ```
 
-   > 建议使用 [`python-dotenv`](https://pypi.org/project/python-dotenv/) 或其他方式管理本地开发时的环境变量。
+   > 如果仍希望通过环境变量配置，可设置 `FIREFLY_BASE_URL` 和 `FIREFLY_ACCESS_TOKEN` 作为备用方案。
 
 2. **安装依赖**
 
@@ -35,6 +41,8 @@
    ```
 
    访问 `http://localhost:8000`，即可看到记账页面。
+
+   首次访问时，后端会向 Firefly III 拉取账户、预算、分类、标签等信息并缓存在 `config.json` 中。之后会优先使用缓存，且每 12 小时自动向接口拉取数据进行对比，若数据有变更会更新配置文件。
 
 ## 项目结构
 

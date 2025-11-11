@@ -1,0 +1,24 @@
+{
+  "firefly": {
+    "base_url": "https://your-firefly-instance",
+    "access_token": "your-personal-access-token"
+  },
+  "resource_cache": {
+    "accounts?type=asset": {
+      "data": [],
+      "last_synced_at": null
+    },
+    "budgets": {
+      "data": [],
+      "last_synced_at": null
+    },
+    "categories": {
+      "data": [],
+      "last_synced_at": null
+    },
+    "tags": {
+      "data": [],
+      "last_synced_at": null
+    }
+  }
+}
